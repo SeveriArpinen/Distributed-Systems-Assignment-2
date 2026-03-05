@@ -9,20 +9,23 @@ PORT = 5000
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((HOST,PORT))
 
+nickname = input("Enter your nickname: ")
+client.send(nickname.encode("utf-8"))
+
 def receive_messages():
     while True:
         try:
             message = client.recv(1024).decode("utf-8")
-            print(f"\n{message}")
-            print("You: ", end="", flush=True)
+            print(message)
         except:
-            print("\nConnection closed!")
+            print("Connection closed!")
+            client.close()
             break
 
 def send_messages():
     while True: 
         #sending a message
-        message = input("You: ")
+        message = input()
         client.send(message.encode("utf-8"))
 
         if message.lower() == "quit":
@@ -30,7 +33,8 @@ def send_messages():
             client.close()
             break
 
-print("Connected to server. Send messages or type quit to exit: ")
+print("\nConnected to server.")
+print("Type your messages or quit to exit:\n")
 #Start receive thread
 receive_thread = threading.Thread(target=receive_messages)
 receive_thread.start()

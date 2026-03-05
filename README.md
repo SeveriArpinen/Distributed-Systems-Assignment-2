@@ -1,2 +1,2 @@
-Repo for the cours, Distributed Systems
+Repo for the course, Distributed Systems
 Assignment 2

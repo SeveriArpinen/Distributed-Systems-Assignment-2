@@ -6,18 +6,17 @@ PORT= 5000
 clients = {} # dict. for clients and nicknames client_socket: {nickname : channel}
 
 #making a socket
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP socket
 server.bind((HOST,PORT))
-
-server.listen(1)
+server.listen()
 
 print(f"Server running and listening on {HOST} : {PORT}")
 
 
-# send message to all clients connected
-def broadcast(message, channel, sender_socket=None):
-    for client_socket, info in clients.items():
-        if info['channel'] == channel and client_socket != sender_socket: # dont send message to sender
+# send message to clients, checks for the channel and that its not the sender
+def message(message, channel, sender_socket=None):
+    for client_socket, user in clients.items():
+        if user['channel'] == channel and client_socket != sender_socket: # send to same channel, dont send message to sender
             try:
                 client_socket.send(message.encode("utf-8"))
             except:
@@ -31,41 +30,52 @@ def handle_client(client_socket, address): # handle single clients in separate t
     clients[client_socket] = {"nickname": nickname, "channel": "general"} #set name and general channel
 
     print(f"{nickname} joined general chat")
-    broadcast(f"{nickname} joined general chat\n", "general")
-    client_socket.send("You are currently in general channel. /join to join different channels\n".encode("utf-8"))
 
     while True:
         try:
             # get message
-            message = client_socket.recv(1024).decode("utf-8")
+            msg = client_socket.recv(1024).decode("utf-8")
 
-            if message.lower() == "quit":
+            if not msg or msg.lower() == "quit":
                 break
             #check if client sends /join
-            if message.startswith("/join"):
-                new_channel = message.split(" ",1)[1].strip() # get new channel
+            if msg.startswith("/join "):
+                new_channel = msg.split(" ",1)[1].strip() # get new channel
                 clients[client_socket]["channel"] = new_channel # change channel
 
-                # broadcast join to everyone
                 print(f"{nickname} joined {new_channel}")
-                broadcast(f"{nickname} joined {channel}\n", new_channel)
-                client_socket.send(f"You joined the channel {new_channel}\n".encode("utf-8"))
+
+            elif msg.startswith("/private "):
+                splits = msg.split(" ", 2)
+                if len(splits) >= 3:
+                    private_name = splits[1]
+                    private_msg = splits[2]
+
+                    for sock, user in clients.items():
+                        if user["nickname"] == private_name:
+                            sock.send(f"[Private] {nickname}: {private_msg}\n".encode("utf-8"))
+                            print(f"{nickname} -> {private_name}: {private_msg}")
+                            break
+
+            elif msg == "/users": # print users
+                res = "Users online:\n"
+                for user in clients.values():
+                    res += f"{user['nickname']}\n"
+                client_socket.send(res.encode("utf-8"))
+
 
             else:
                 #normal message 
-                #print message
                 current_channel = clients[client_socket]["channel"]
-                print(f"[{current_channel}]{nickname}: {message}")
+                print(f"[{current_channel}]{nickname}: {msg}")
 
                 # send response to all clients 
-                broadcast(f"[{current_channel}] {nickname}: {message}\n", current_channel, client_socket)
+                message(f"[{current_channel}] {nickname}: {msg}\n", current_channel, None)
         except:
             break
 
     # client disconnet
-    channel = clients[client_socket]["channel"]
-    print(f"{nickname} left the chat")
-    broadcast(f"{nickname} left the chat\n", channel)
+    print(f"{nickname} disconnected")
     del clients[client_socket]
     client_socket.close()
 

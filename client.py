@@ -26,6 +26,13 @@ def send_messages():
     while True: 
         #sending a message
         message = input()
+        if message.startswith("/private "):
+            splits = message.split(" ", 2)
+            if len(splits) >= 3:
+                user = splits[1]
+                msg = splits[2]
+                print(f"[private] You -> {user}: {msg}")
+                
         client.send(message.encode("utf-8"))
 
         if message.lower() == "quit":
@@ -35,6 +42,9 @@ def send_messages():
 
 print("\nConnected to server.")
 print("Type your messages or quit to exit:\n")
+print("Type /users to list active users")
+print("Type /join x to join different channel")
+print("Type /private x msg to send private chat")
 #Start receive thread
 receive_thread = threading.Thread(target=receive_messages)
 receive_thread.start()
